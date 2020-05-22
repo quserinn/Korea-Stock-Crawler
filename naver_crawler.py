@@ -35,7 +35,7 @@ class Crawler:
 
         return firm_datas
 
-    def get_fin_df(self, firm_code, download=False, save_file=True):
+    def get_fin_df(self, firm_code, download=False):
         
         file_path = self.fin_data_dir + "/" + str(firm_code) + ".csv"
         
@@ -45,15 +45,15 @@ class Crawler:
         self.driver.get(self.base_url.format(firm_code))
         html = self.driver.page_source
 
-        bs = bs4.BeautifulSoup(html, 'html.parser')
-        parent_div = bs.find("div", {"id": lambda l: l and len(l) == 10})
+        soup = bs4.BeautifulSoup(html, 'html.parser')
+        parent_div = soup.find("div", {"id": lambda l: l and len(l) == 10})
         if not parent_div:
             raise NoDataError("데이터가 없습니다.")
         fin_info = parent_div.find_all("table")[1]
 
-        th_data = [item.get_text().strip()[:7] for item in fin_info.select('thead th')]
+        col_data = [item.get_text().strip()[:7] for item in fin_info.select('thead th')]
                 
-        col_index = th_data[3:13]
+        col_index = col_data[3:13]
         row_index = [item.get_text().strip() for item in fin_info.select('tbody th.bg')]
 
         fin_data = [item.get_text().strip() for item in fin_info.select('td')]
@@ -62,17 +62,16 @@ class Crawler:
 
         fin_df = pd.DataFrame(data=fin_data[0:,0:], index=row_index, columns=col_index)
         
-        if save_file:
-            if not os.path.exists(self.fin_data_dir):
-                os.makedirs(self.fin_data_dir)
-            fin_df.to_csv(file_path, encoding='utf-8-sig')
+        if not os.path.exists(self.fin_data_dir):
+            os.makedirs(self.fin_data_dir)
+        fin_df.to_csv(file_path, encoding='utf-8-sig')
         
         return fin_df
     
     def download_and_save_all_fin_data(self):
         for code in tqdm.tqdm(self.firm_codes):
             try:
-                self.get_fin_df(code, download=False, save_file=True)
+                self.get_fin_df(code, download=False)
             except NoDataError:
                 continue
             except selenium.common.exceptions.UnexpectedAlertPresentException:
@@ -97,7 +96,7 @@ class Crawler:
 
         return price_df
 
-    def get_total_price_df(self, save_file=True):
+    def get_total_price_df(self):
         date = datetime.now().strftime("%y%m%d")
         file_name = self.price_data_dir + "/" + date + ".csv" 
         if os.path.isfile(file_name):
@@ -120,9 +119,8 @@ class Crawler:
                 continue
 
         total_price_df.index = pd.to_datetime(total_price_df.index)
-        
-        if save_file:
-            if not os.path.exists(self.price_data_dir):
-                os.makedirs(self.price_data_dir)
-            total_price_df.to_csv(file_name)
+            
+        if not os.path.exists(self.price_data_dir):
+            os.makedirs(self.price_data_dir)
+        total_price_df.to_csv(file_name)
         return total_price_df

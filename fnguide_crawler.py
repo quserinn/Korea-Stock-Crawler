@@ -29,20 +29,20 @@ class Crawler:
 
         return firm_datas
 
-    def get_fin_df(self, firm_code, download=False, save_file=True):
+    def get_fin_df(self, firm_code, download=False):
         
         file_path = self.fin_data_dir + "/" + str(firm_code) + ".csv"
         
         if os.path.isfile(file_path) and not download:
             return pd.read_csv(file_path)
 
-        fs_info = requests.get(self.base_url.format(firm_code)).text
-        bs = bs4.BeautifulSoup(fs_info, 'html.parser')
-        fin_info = bs.select('#highlight_D_A')[0]
+        html = requests.get(self.base_url.format(firm_code)).text
+        soup = bs4.BeautifulSoup(html, 'html.parser')
+        fin_info = soup.select('#highlight_D_A')[0]
 
-        th_data = [item.get_text() if len(item.get_text()) == 7 else item.get_text()[-12:-5] for item in fin_info.select('thead th')]
+        col_data = [item.get_text() if len(item.get_text()) == 7 else item.get_text()[-12:-5] for item in fin_info.select('thead th')]
                 
-        col_index = th_data[3:13]
+        col_index = col_data[3:13]
         row_index = [item.find('dt').get_text().strip() if item.dt else item.get_text().strip() for item in fin_info.select('tbody th')]
 
         fin_data = [item.get_text().strip() for item in fin_info.select('td')]
@@ -51,25 +51,25 @@ class Crawler:
 
         fin_df = pd.DataFrame(data=fin_data[0:,0:], index=row_index, columns=col_index)
         
-        if save_file:
-            if not os.path.exists(self.fin_data_dir):
-                os.makedirs(self.fin_data_dir)
-            fin_df.to_csv(file_path, encoding='utf-8-sig')
+        
+        if not os.path.exists(self.fin_data_dir):
+            os.makedirs(self.fin_data_dir)
+        fin_df.to_csv(file_path, encoding='utf-8-sig')
         
         return fin_df
     
     def download_and_save_all_fin_data(self):
         for code in tqdm.tqdm(self.firm_codes):
             try:
-                self.get_fin_df(code, download=True, save_file=True)
+                self.get_fin_df(code, download=True)
             except NoDataError:
                 continue
             except requests.exceptions.Timeout:
                 time.sleep(60)
-                self.get_fin_df(code, download=True, save_file=True)
+                self.get_fin_df(code, download=True)
             except requests.exceptions.ConnectionError:
                 time.sleep(60)
-                self.get_fin_df(code, download=True, save_file=True)
+                self.get_fin_df(code, download=True)
             except ValueError:
                 continue
             except KeyError:
@@ -90,7 +90,7 @@ class Crawler:
 
         return price_df
 
-    def get_total_price_df(self, save_file=True):
+    def get_total_price_df(self):
         date = datetime.now().strftime("%y%m%d")
         file_name = self.price_data_dir + "/" + date + ".csv" 
         if os.path.isfile(file_name):
@@ -114,8 +114,7 @@ class Crawler:
 
         total_price_df.index = pd.to_datetime(total_price_df.index)
         
-        if save_file:
-            if not os.path.exists(self.price_data_dir):
-                os.makedirs(self.price_data_dir)
-            total_price_df.to_csv(file_name)
+        if not os.path.exists(self.price_data_dir):
+            os.makedirs(self.price_data_dir)
+        total_price_df.to_csv(file_name)
         return total_price_df
