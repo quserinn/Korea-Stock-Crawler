@@ -31,3 +31,7 @@ cr.download_and_save_all_fin-data()
 cr.get_total_price_df()
 ```
 - 가격 정보 저장
+
+## 결과 화면 예시
+- CompanyGuide Crawler
+![image](https://quserinn.github.io/content-images/crawling-pic-5.png)
