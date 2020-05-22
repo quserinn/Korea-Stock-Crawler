@@ -8,12 +8,12 @@
 ## Prerequisites
 - 종목 코드 파일 : [여기서](http://marketdata.krx.co.kr/mdi#document=040601) Excel 파일 다운
 
-## Naver Crawer
+## Naver Crawler
 - 원본 데이터 주소 : "https://navercomp.wisereport.co.kr/v2/company/c1010001.aspx?cmp_cd=005930"
 - 원본 html에 데이터가 있는 것이 아니라 javascript로 불러오기 때문에 `selenium`의 `webdriver`로 페이지를 열어서 데이터를 긁어옴
 - Chrome 8.3 버전에 맞는 Chrome Driver 사용. [다운 링크](https://chromedriver.storage.googleapis.com/index.html?path=83.0.4103.39/)
 
-## CompanyGuide Grawer
+## CompanyGuide Crawler
 - 원본 데이터 주소 : http://comp.fnguide.com/SVO2/ASP/SVD_Main.asp?pGB=1&gicode=A005930&cID=&MenuYn=Y&ReportGB=&NewMenuID=101&stkGb=701
 
 ## Usage 
