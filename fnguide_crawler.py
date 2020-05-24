@@ -13,7 +13,7 @@ class NoDataError(Exception):
         self.message = message
 
 class Crawler:
-    def __init__(self, fin_data_dir="fin_data", price_data_dir="price_data", firm_data_path="data.xls", chrome_driver_path="chromedriver.exe"):
+    def __init__(self, fin_data_dir="fin_data", price_data_dir="price_data", firm_data_path="data.xls"):
         self.base_url = "http://comp.fnguide.com/SVO2/ASP/SVD_Main.asp?pGB=1&gicode={}&cID=&MenuYn=Y&ReportGB=&NewMenuID=101&stkGb=701"
         self.price_base_url = "https://fchart.stock.naver.com/sise.nhn?requestType=0&symbol={}&timeframe={}&count={}"
         self.fin_data_dir = fin_data_dir
@@ -24,8 +24,11 @@ class Crawler:
 
     def read_all_firm_data(self):
         firm_datas = pd.read_excel(self.firm_data_path)
-        firm_datas = firm_datas[["종목코드", "기업명", "업종코드", "상장주식수(주)"]]
-        firm_datas["종목코드"] = firm_datas["종목코드"].apply(lambda code: 'A' + '0'*(6-len(str(code))) + str(code))
+        if "유동주식수" in firm_datas.columns:
+            firm_datas = firm_datas[["종목코드", "기업명", "업종", "상장주식수(주)", "유동주식수"]]
+        else:
+            firm_datas = firm_datas[["종목코드", "기업명", "업종", "상장주식수(주)"]]
+        firm_datas["종목코드"] = firm_datas["종목코드"].apply(lambda code: '0'*(6-len(str(code))) + str(code))
 
         return firm_datas
 
@@ -36,7 +39,7 @@ class Crawler:
         if os.path.isfile(file_path) and not download:
             return pd.read_csv(file_path)
 
-        html = requests.get(self.base_url.format(firm_code)).text
+        html = requests.get(self.base_url.format('A' + firm_code)).text
         soup = bs4.BeautifulSoup(html, 'html.parser')
         fin_info = soup.select('#highlight_D_A')[0]
 
@@ -59,6 +62,7 @@ class Crawler:
         return fin_df
     
     def download_and_save_all_fin_data(self):
+        print("fnguide_crawler : 모든 종목 재무제표 데이터 다운")
         for code in tqdm.tqdm(self.firm_codes):
             try:
                 self.get_fin_df(code, download=True)
@@ -96,6 +100,7 @@ class Crawler:
         if os.path.isfile(file_name):
             return pd.read_csv(file_name)
 
+        print("fnguide_crawler : 모든 종목 가격 데이터 다운")
         total_price_df = self.get_price_df(self.firm_codes[0])
         for code in tqdm.tqdm(self.firm_codes[1:]):
             try:
@@ -116,5 +121,5 @@ class Crawler:
         
         if not os.path.exists(self.price_data_dir):
             os.makedirs(self.price_data_dir)
-        total_price_df.to_csv(file_name)
+        total_price_df.to_csv(file_name, sep='\t')
         return total_price_df

@@ -23,14 +23,14 @@ class Crawler:
         self.firm_data_path = firm_data_path
         self.firm_datas = self.read_all_firm_data()
         self.firm_codes = self.firm_datas["종목코드"]
-        self.driver = webdriver.Chrome(executable_path=chrome_driver_path)
-    
-    def __del__(self):
-        self.driver.close()
+        self.chrome_driver_path = chrome_driver_path
 
     def read_all_firm_data(self):
-        firm_datas = pd.read_excel(self.firm_data_path)
-        firm_datas = firm_datas[["종목코드", "기업명", "업종코드", "상장주식수(주)"]]
+        firm_datas = pd.read_excel(self.firm_data_path, thousands=',')
+        if "유동주식수" in firm_datas.columns:
+            firm_datas = firm_datas[["종목코드", "기업명", "업종", "상장주식수(주)", "유동주식수", "발행주식수(보통)", "발행주식수(우선)"]]
+        else:
+            firm_datas = firm_datas[["종목코드", "기업명", "업종", "상장주식수(주)"]]
         firm_datas["종목코드"] = firm_datas["종목코드"].apply(lambda code: '0'*(6-len(str(code))) + str(code))
 
         return firm_datas
@@ -38,9 +38,8 @@ class Crawler:
     def get_fin_df(self, firm_code, download=False):
         
         file_path = self.fin_data_dir + "/" + str(firm_code) + ".csv"
-        
         if os.path.isfile(file_path) and not download:
-            return pd.read_csv(file_path)
+            return pd.read_csv(file_path, sep='\t', thousands=',')
 
         self.driver.get(self.base_url.format(firm_code))
         html = self.driver.page_source
@@ -64,11 +63,13 @@ class Crawler:
         
         if not os.path.exists(self.fin_data_dir):
             os.makedirs(self.fin_data_dir)
-        fin_df.to_csv(file_path, encoding='utf-8-sig')
+        fin_df.to_csv(file_path, sep = '\t', encoding='utf-8-sig')
         
         return fin_df
     
     def download_and_save_all_fin_data(self):
+        print("naver_crawler : 모든 재무제표 다운로드")
+        self.driver = webdriver.Chrome(executable_path=self.chrome_driver_path)
         for code in tqdm.tqdm(self.firm_codes):
             try:
                 self.get_fin_df(code, download=False)
@@ -82,6 +83,7 @@ class Crawler:
                 continue
             except IndexError:
                 continue
+        self.driver.close()
 
     def get_price_df(self, code, timeframe='day', count='1500'):
         url = self.price_base_url.format(code, timeframe, count)
@@ -122,5 +124,5 @@ class Crawler:
             
         if not os.path.exists(self.price_data_dir):
             os.makedirs(self.price_data_dir)
-        total_price_df.to_csv(file_name)
+        total_price_df.to_csv(file_name, sep='\t')
         return total_price_df
